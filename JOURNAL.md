@@ -1,7 +1,7 @@
 ---
 title: "Note Block Maestro"
 author: "Luke Collingridge"
-description: "A physical note block that plays MIDI files as note block audio, and can also convert them to schematic or data pack form for use in-game."
+description: "A physical note block that plays MIDI files as note block audio with a visualizer, and can also convert them to schematic or data pack form for use in-game."
 created_at: "2025-06-28"
 ---
 
@@ -39,7 +39,7 @@ The past day has mostly been spent just planning and shopping for parts. I think
  - 600‑pc M3 nylon standoffs in case I don't have any lying around
  - Premium soldering kit in case I don't have one somewhere
  - Official	Pi 5 Active Cooler
- - Either 3d-printing filament or plywood for the container. 3d-printing would be much preferred but difficult for me to get access too, plus I'm low on budget
+ - Either 3d-printing filament or plywood for the container. I really hope to be able to 3d-print this, but we'll see
  - Screws and nuts, which I almost certainly have lying around
  - Possibly Pololu's power switch for smart shutdown, but only if I have the money to spare
 
