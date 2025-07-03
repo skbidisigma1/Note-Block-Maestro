@@ -64,3 +64,5 @@ I talked with a friend with a 3D printer and figured out logistics for that. I t
 
 I finalized the lid in the model, increased the size by about an inch as my original calculations were too small, and then realized I need to measure the parts before I finish the model. So I'm going to have to call it here for the model until the parts have arrived.
 ![Finished lid and increased size](media/images/screenshot2.png)
+
+**Total time spent: 15 hours**
