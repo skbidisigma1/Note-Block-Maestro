@@ -59,3 +59,8 @@ I talked with a friend with a 3D printer and figured out logistics for that. I t
 ![Basic modeling for note block](media/images/screenshot1.png)
 
 **Total time spent: 12 hours**
+
+# July 2nd: As much progress on the model as I can make for now
+
+I finalized the lid in the model, increased the size by about an inch as my original calculations were too small, and then realized I need to measure the parts before I finish the model. So I'm going to have to call it here for the model until the parts have arrived.
+![Finished lid and increased size](media/images/screenshot2.png)
