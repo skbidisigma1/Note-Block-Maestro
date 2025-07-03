@@ -5,7 +5,9 @@ description: "A physical note block that plays MIDI files as note block audio wi
 created_at: "2025-06-28"
 ---
 
-# June 28th: Planning
+### Total time spent on project: 18 hours
+
+## June 28th: Planning
 
 Today was spent planning out the project just to make sure it's technically feasible, as well as doing some basic setup and preparation. As for hardware, this is what I've come up with so far (very tentative and incomplete list):
 
@@ -24,9 +26,9 @@ I also took a look into software to use for the project:
 
 Next I'll work on actually submitting the project, testing software from my PC, and figuring out specific hardware models to purchase as well as costs.
 
-**Total time spent: 2 hours**
+### Total time spent: 2 hours
 
-# June 29th: Planning, shopping, and finalizing
+## June 29th: Planning, shopping, and finalizing
 
 The past day has mostly been spent just planning and shopping for parts. I think I have figured out every part that I want to use:
 
@@ -50,19 +52,20 @@ Already filled my cart on Amazon and Vilros and am ready to submit my order anyt
 
 The software stack remains similar, but I realized that instead of decoding `.nbs` files in real time, I can take in `.mid`, `.midi` or `.nbs` files as input, then export both a `.nbs` file and a `.flac` file. The `.flac` will be used for audio playback, as it will run very lightweight on the Pi 5, then the `.nbs` file can be decoded into `.json` and used for the visualizer. The visualizer is a new idea, and is essentially this: The parser reads how many instruments are in the song about to be played, and adds one note block sprite for each instrument, with their respective block sprite underneath it. Then, synced to the audio, every time a note plays from an instrument, that note block will output a music note. In the real game the notes are colored based on what frequency is playing, and I think the best way to do that for such a wide range is to see the highest and lowest notes in the song, then use that to change the hue of the notes. The bigger the range is, the smaller the difference in color between notes will be. I also plan to have a touchscreen and camera now, so touchscreen inputs are definitely going to happen, and I might incorporate some kind of camera controls with custom gestures. Still don't know exactly how I'll use all the features, but I will definitely try to use everything as much as possible. The next step will be submitting this project (still haven't done it) and beginning software testing on a VM.
 
-**Total time spent: 9 hours**
+### Total time spent: 9 hours
 
-# July 1st: Beginning 3D Modeling
+## July 1st: Beginning 3D Modeling
 
 I talked with a friend with a 3D printer and figured out logistics for that. I then started designing the model for the note block. I didn't get a whole lot done, but I've had to learn to use Fusion 360 from scratch. So far I only have the main box and the lid done.
 
 ![Basic modeling for note block](media/images/screenshot1.png)
 
-**Total time spent: 12 hours**
+### Total time spent: 12 hours
 
-# July 2nd: As much progress on the model as I can make for now
+## July 2nd: As much progress on the model as I can make for now
 
-I finalized the lid in the model, increased the size by about an inch as my original calculations were too small, and then realized I need to measure the parts before I finish the model. So I'm going to have to call it here for the model until the parts have arrived.
+I finalized the lid in the model, increased the size by about an inch as my original calculations were too small, and then realized I need to measure the parts before I finish the model. So I'm going to have to call it here for the model until the parts have arrived. I also created the wire diagram, as shown on the README.
+
 ![Finished lid and increased size](media/images/screenshot2.png)
 
-**Total time spent: 15 hours**
+### Total time spent: 18 hours
