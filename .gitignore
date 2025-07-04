@@ -1,1 +1,11 @@
-.venv/
+**/.venv/
+**/__pycache__/
+**/amt/
+**/temp/
+**/DawVert/
+**/examples/
+**/.idea/
+**/*.egg-info
+*.pyc
+*.pyo
+*.pyd
