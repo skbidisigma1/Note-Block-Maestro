@@ -5,7 +5,7 @@ description: "A physical note block that plays MIDI files as note block audio wi
 created_at: "2025-06-28"
 ---
 
-### Total time spent on project: 18 hours
+### Total time spent on project: 21 hours
 
 ## June 28th: Planning
 
@@ -44,7 +44,7 @@ The past day has mostly been spent just planning and shopping for parts. I think
 - 600‑pc M3 nylon standoffs in case I don't have any lying around
 - Premium soldering kit in case I don't have one somewhere
 - Official Pi 5 Active Cooler
-- Either 3d-printing filament or plywood for the container. I really hope to be able to 3d-print this, but we'll see
+- Either 3D printing filament or plywood for the container. I really hope to be able to 3d-print this, but we'll see
 - Screws and nuts, which I almost certainly have lying around
 - Possibly Pololu's power switch for smart shutdown, but only if I have the money to spare
 
@@ -69,3 +69,11 @@ I finalized the lid in the model, increased the size by about an inch as my orig
 ![Finished lid and increased size](media/images/screenshot2.png)
 
 ### Total time spent: 18 hours
+
+## July 3rd: Testing libraries and code
+
+I remembered I still hadn't tried the libraries that this device will need to run on. I tested Hyperchoron first, and got it to work without too much trouble. I then decided to drop pynbs for reading `.nbs` files and switched to simply exporting `.csv` from Hyperchoron and parsing that. I found [nbswave](https://github.com/OpenNBS/nbswave), which is what I am going to need to use to render songs as audio files, because Hyperchoron currently doesn't support direct audio exports. I haven't got it to work yet because of dependency incompatibility, but I'll try to get pipx working to run separate environments there.
+
+![Rush E exported successfully](media/images/screenshot3.png)
+
+### Total time spent: 21 hours
