@@ -5,7 +5,7 @@ description: "A physical note block that plays MIDI files as note block audio wi
 created_at: "2025-06-28"
 ---
 
-### Total time spent on project: 21 hours
+### Total time spent on project: 24 hours
 
 ## June 28th: Planning
 
@@ -77,3 +77,11 @@ I remembered I still hadn't tried the libraries that this device will need to ru
 ![Rush E exported successfully](media/images/screenshot3.png)
 
 ### Total time spent: 21 hours
+
+## July 5th: Progressing on the model and project submission
+
+I spent _way_ too long calculating dimensions for ventilation, but eventually did figure it out. Apart from that I modeled the speaker holes, double checked dimensions, and did my first render of the model. It will probably need some tweaking and will definitely need some checks once I get my actual parts, but it is very close as-is and should be nearly ready to print. I'm also submitting my project right after writing this, so wish me luck.
+
+![First model render](media/images/screenshot4.png)
+
+### Total time spent: 24 hours
