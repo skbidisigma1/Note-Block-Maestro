@@ -6,7 +6,7 @@ This project is a physical note block player that uses a Raspberry Pi 5 to play 
 
 ## Why did I make this?
 
-Minecraft note blocks have been a passion of mine for a long time, so when I first heard about Highway, it didn't take long to come up with this idea. I got to work on this almost immediately and am excited to be able to learn hardware skills and enhance my software skills with this project.
+Minecraft note blocks have been a passion of mine for a long time, so when I first heard about Highway, it didn't take long for me to come up with this idea. I got to work on this almost immediately and am excited to be able to finally learn hardware skills and enhance my software skills with this project.
 
 ## How does it work?
 
@@ -16,9 +16,9 @@ The project is not done yet, far from it in fact. But once it is done, you trans
 
 ## Pictures
 
-### 3D Model (work-in-progress)
+### 3D Model
 
-![Note Block CAD](media/images/screenshot2.png)
+![Note Block CAD](media/images/screenshot4.png)
 
 ### Wiring Diagram
 
