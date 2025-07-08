@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 
 def run_command(cmd, description, cwd=None):
-    """Run a command and handle errors."""
     print(f"Running: {description}")
     try:
         result = subprocess.run(

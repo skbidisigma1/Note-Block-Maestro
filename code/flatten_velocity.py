@@ -8,7 +8,7 @@ def flatten_vel(in_path: Path) -> Path:
         for msg in track:
             if msg.type == "note_on":
                 msg.velocity = 127
-    out_path = in_path.with_stem(in_path.stem + "_flattened")
+    out_path = in_path.with_stem(in_path.stem + "_f")
     mid.save(out_path)
     return out_path
 

@@ -5,7 +5,7 @@ description: "A physical note block that plays MIDI files as note block audio wi
 created_at: "2025-06-28"
 ---
 
-### Total time spent on project: 24 hours
+### Total time spent on project: 28 hours
 
 ## June 28th: Planning
 
@@ -85,3 +85,11 @@ I spent _way_ too long calculating dimensions for ventilation, but eventually di
 ![First model render](media/images/screenshot4.png)
 
 ### Total time spent: 24 hours
+
+## July 7th: Wrote the conversion pipeline
+
+I finally started to take a stab at the real code for this. I wrote a pipeline which takes in a `MIDI` and outputs `.nbs`, `.csv`, and `.flac`. The `.nbs` is rendered to `.flac` and deleted by default, but with the option to keep it. I think the next step will be the web GUI, so I'll work on that next. I also finally got pipx working to fix dependency issues with nbswave.
+
+![Successful pipeline](media/images/screenshot5.png)
+
+### Total time spent: 28 hours

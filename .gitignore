@@ -11,3 +11,4 @@
 *.pyo
 *.pyd
 code/processed_songs/
+**/output/
