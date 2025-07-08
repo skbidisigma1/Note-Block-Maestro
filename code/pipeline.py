@@ -1,11 +1,4 @@
-#!/usr/bin/env python3
-"""
-Note Block Maestro Pipeline
-Converts MIDI to NBS, CSV, JSON formats and renders FLAC audio
-"""
-
 import argparse
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -14,7 +7,13 @@ def run_command(cmd, description, cwd=None):
     """Run a command and handle errors."""
     print(f"Running: {description}")
     try:
-        result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True, cwd=cwd)
+        result = subprocess.run(
+            cmd,
+            check=True,
+            capture_output=True,
+            text=True,
+            cwd=cwd
+        )
         if result.stdout:
             print(f"  Output: {result.stdout.strip()}")
         return True
@@ -27,7 +26,6 @@ def run_command(cmd, description, cwd=None):
         return False
 
 def convert_midi_to_formats(midi_path, output_dir):
-    """Convert MIDI to NBS, CSV, and JSON using hyperchoron."""
     midi_path = Path(midi_path)
     output_dir = Path(output_dir)
     output_dir.mkdir(exist_ok=True)
@@ -46,8 +44,8 @@ def convert_midi_to_formats(midi_path, output_dir):
     if not run_command(cmd, f"Converting {midi_path.name} to CSV"):
         return nbs_path, None, None
     
-    # Convert to JSON - Note: hyperchoron doesn't directly support JSON, using CSV for now
-    json_path = None  # TODO: Add JSON export if needed
+    # Convert to JSON
+    json_path = None # TODO: add json metadata export
     
     return nbs_path, csv_path, json_path
 
@@ -59,12 +57,19 @@ def render_audio(nbs_path, output_dir, audio_env_path):
     base_name = nbs_path.stem
     flac_path = output_dir / f"{base_name}.flac"
     
-    # Use the audio environment to render
-    python_exe = audio_env_path / "Scripts" / "python.exe"
+    if sys.platform == "win32":
+        python_exe = audio_env_path / "Scripts" / "python.exe"
+    else:
+        python_exe = audio_env_path / "bin" / "python"
     render_script = Path(__file__).parent / "render_song.py"
-    sounds_dir = Path(__file__).parent / "sounds"  # sounds directory is in code/sounds
+    sounds_dir = Path(__file__).parent / "sounds"
     
-    cmd = f'"{python_exe}" "{render_script}" "{nbs_path}" "{flac_path}" --sounds "{sounds_dir}"'
+    cmd = [
+        str(python_exe),
+        str(render_script),
+        str(nbs_path),
+        str(flac_path),
+    ]
     
     if run_command(cmd, f"Rendering {nbs_path.name} to FLAC"):
         return flac_path
@@ -79,7 +84,6 @@ def main():
     
     args = parser.parse_args()
     
-    # Set up paths
     midi_path = Path(args.midi_file)
     if not midi_path.exists():
         print(f"Error: MIDI file not found: {midi_path}")
@@ -87,7 +91,6 @@ def main():
     
     output_dir = Path(args.output)
     
-    # Default audio environment path
     if args.audio_env:
         audio_env_path = Path(args.audio_env)
     else:
@@ -104,7 +107,7 @@ def main():
     print()
     
     # Step 1: Convert MIDI to formats
-    print("Step 1: Converting MIDI to NBS/CSV...")
+    print("Step 1: Converting MIDI to NBS/CSV/JSON...")
     nbs_path, csv_path, json_path = convert_midi_to_formats(midi_path, output_dir)
     
     if not nbs_path:
@@ -112,36 +115,33 @@ def main():
         sys.exit(1)
     
     # Step 2: Render audio
-    print("\\nStep 2: Rendering NBS to FLAC...")
+    print("\nStep 2: Rendering NBS to FLAC...")
     flac_path = render_audio(nbs_path, output_dir, audio_env_path)
     
     if not flac_path:
         print("Failed to render audio")
         sys.exit(1)
     
-    # Step 3: Clean up NBS file if requested
+    # Step 3: Remove NBS file if not keeping it
     if not args.keep_nbs and nbs_path.exists():
-        print(f"\\nRemoving NBS file: {nbs_path}")
+        print(f"\nRemoving NBS file: {nbs_path}")
         nbs_path.unlink()
     
     # Summary
-    print("\\n" + "="*50)
+    print("\n" + "="*50)
     print("Pipeline completed successfully!")
     print("="*50)
     
     outputs = []
     if flac_path and flac_path.exists():
-        outputs.append(f"🎵 Audio: {flac_path}")
+        outputs.append(f"AUDIO: {flac_path}")
     if csv_path and csv_path.exists():
-        outputs.append(f"📊 Visualizer data: {csv_path}")
+        outputs.append(f"CSV: {csv_path}")
     if args.keep_nbs and nbs_path and nbs_path.exists():
-        outputs.append(f"🎹 Note blocks: {nbs_path}")
+        outputs.append(f"NBS: {nbs_path}")
     
     for output in outputs:
         print(f"  {output}")
-    
-    print()
-    print("Ready for Note Block Maestro! 🎵")
 
 if __name__ == "__main__":
     main()
