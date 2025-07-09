@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Note Block Maestro</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    <style>
+        @font-face {
+            font-family: 'Miracode';
+            src: url('./assets/Miracode.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        
+        :root {
+            --bg: #263238;
+            --surface: #37474f;
+            --accent: #ffb300;
+            --txt: #eceff1;
+            --good: #2e7d32;
+            --bad: #c62828;
+            font-size: 16px
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Miracode', 'Courier New', monospace
+        }
+        body {
+            background: var(--bg);
+            color: var(--txt);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column
+        }
+        header {
+            background: #455a64;
+            padding: .8rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem
+        }
+        header h1 {
+            font-size: 1.4rem;
+            color: var(--accent);
+            flex: 1
+        }
+        nav a {
+            color: var(--txt);
+            margin-right: 1rem;
+            text-decoration: none
+        }
+        nav a.active,
+        nav a:hover {
+            color: var(--accent)
+        }
+        main {
+            flex: 1;
+            padding: 1rem;
+            max-width: 1100px;
+            margin: auto
+        }
+        .card {
+            background: var(--surface);
+            padding: 1rem 1.2rem;
+            border-radius: 8px;
+            margin-bottom: 1rem
+        }
+        h2 {
+            margin-bottom: .5rem;
+            color: var(--accent)
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse
+        }
+        th,
+        td {
+            padding: .5rem .4rem;
+            text-align: left
+        }
+        tr:nth-child(even) {
+            background: rgba(0, 0, 0, .07)
+        }
+        button,
+        select,
+        input[type=file] {
+            font: inherit
+        }
+        button {
+            cursor: pointer;
+            padding: .4rem .8rem;
+            border: none;
+            border-radius: 4px;
+            color: var(--bg);
+            background: var(--accent);
+            margin-right: .4rem
+        }
+        button.danger {
+            background: var(--bad);
+            color: #fff
+        }
+        button.good {
+            background: var(--good);
+            color: #fff
+        }
+        input[type=text] {
+            padding: .3rem .4rem;
+            border-radius: 4px;
+            border: 1px solid #666;
+            background: #263238;
+            color: #fff;
+            width: 100%
+        }
+        @media(max-width:700px) {
+            table, thead, tbody, tr, td, th {
+                display: block
+            }
+            tr {
+                margin-bottom: .8rem
+            }
+            td {
+                padding-left: 50%;
+                position: relative
+            }
+            td:before {
+                content: attr(data-label);
+                position: absolute;
+                left: .4rem;
+                top: 0;
+                font-weight: 700
+            }
+            thead {
+                display: none
+            }
+        }
+        .tooltip {
+            position: relative
+        }
+        .tooltip:hover:after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #000;
+            padding: .3rem .5rem;
+            border-radius: 4px;
+            font-size: .8rem;
+            white-space: pre;
+            z-index: 10
+        }
+        .flash {
+            padding: .5rem;
+            border-radius: 4px;
+            margin: .4rem 0
+        }
+        .flash.ok {
+            background: var(--good)
+        }
+        .flash.err {
+            background: var(--bad)
+        }
+        .hidden {
+            display: none
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>🎵 Note Block Maestro</h1>
+        <nav>
+            <a href="#dashboard" id="lnkDash">Dashboard</a>
+            <a href="#convert" id="lnkConv">Convert</a>
+            <a href="#quick" id="lnkTemp">Quick Convert</a>
+        </nav>
+    </header>
+
+    <main id="app"></main>
+
+    <script>
+        // reactive helper
+        const h = (t, attrs = {}, ...c) => {
+            const e = document.createElement(t);
+            for (const k in attrs) {
+                if (k === 'className') {
+                    e.className = attrs[k];
+                } else if (k === 'onclick') {
+                    // Handle onclick specially to ensure it's properly bound
+                    e.addEventListener('click', attrs[k]);
+                    console.log('Event listener added to', t, 'element');
+                } else if (k.startsWith('on')) {
+                    // Handle other event handlers
+                    const eventType = k.slice(2); // remove 'on' prefix
+                    e.addEventListener(eventType, attrs[k]);
+                    console.log('Event listener added for', eventType, 'to', t, 'element');
+                } else {
+                    e.setAttribute(k, attrs[k]);
+                }
+            }
+            c.flat().forEach(x => e.append(x));
+            return e
+        }
+
+        const state = {
+            songs: [],
+            playlists: [],
+            flash: [],
+            currentFile: null,
+            currentFiles: [],
+            convertParams: {},
+            quickParams: {}
+        }
+        const api = (u, opts = {}) => fetch(u, opts).then(r => r.ok ? r.json() : Promise.reject(r))
+
+        // dashboard
+        const viewDash = () => [
+            h('div', {
+                    className: 'card'
+                }, h('h2', {}, 'Converted Songs'),
+                state.songs.length ? songTable() : h('p', {}, 'No songs yet.')
+            ),
+            h('div', {
+                    className: 'card'
+                }, h('h2', {}, 'Playlists'),
+                playlistSection()
+            )
+        ]
+
+        const songTable = () => h('table', {},
+            h('thead', {}, h('tr', {},
+                'Name,Created,Actions'.split(',').map(t => h('th', {}, t))
+            )),
+            h('tbody', {}, state.songs.map(s =>
+                h('tr', {},
+                    h('td', {
+                            'data-label': 'Name'
+                        },
+                        h('input', {
+                            type: 'text',
+                            value: s.name,
+                            onchange: e => renameSong(s.id, e.target.value)
+                        })),
+                    h('td', {
+                        'data-label': 'Created'
+                    }, s.created.replace('T', ' ').replace('Z', '')),
+                    h('td', {
+                            'data-label': 'Actions'
+                        },
+                        h('button', {
+                            onclick: () => download(s.id, s.files)
+                        }, 'Download'),
+                        h('button', {
+                            className: 'danger',
+                            onclick: () => delSong(s.id)
+                        }, 'Delete'))
+                )))
+        )
+
+        const renameSong = (id, newName) => {
+            api('/api/songs/' + id, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: newName
+                    })
+                })
+                .then(load).then(() => flash('renamed ✓')).catch(() => flash('error renaming', false))
+        }
+
+        const delSong = id => {
+            console.log('Delete button clicked!', { id });
+            if (!confirm('Delete song?')) return
+            console.log('User confirmed deletion, making API call...');
+            api('/api/songs/' + id, {
+                    method: 'DELETE'
+                }).then(load)
+                .then(() => flash('deleted ✓')).catch(() => flash('delete failed', false))
+        }
+
+        const download = (songId, files) => {
+            console.log('Download button clicked!', { songId, files });
+            // Create a zip download by redirecting to a new endpoint we'll create
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/api/download';
+            form.style.display = 'none';
+            
+            const songIdInput = document.createElement('input');
+            songIdInput.type = 'hidden';
+            songIdInput.name = 'song_id';
+            songIdInput.value = songId;
+            
+            form.appendChild(songIdInput);
+            document.body.appendChild(form);
+            console.log('Submitting form to:', form.action);
+            form.submit();
+            document.body.removeChild(form);
+        }
+
+        const playlistSection = () => {
+            const form = h('div', {},
+                h('h3', {}, 'Create new'),
+                h('input', {
+                    type: 'text',
+                    placeholder: 'Playlist name',
+                    id: 'plname'
+                }),
+                h('div', {}, state.songs.map(s =>
+                    h('label', {},
+                        h('input', {
+                            type: 'checkbox',
+                            value: s.id
+                        }), ' ', s.name, '  ')
+                )),
+                h('button', {
+                    onclick: () => mkpls(form)
+                }, 'Save')
+            )
+            const list = state.playlists.map(p =>
+                h('div', {
+                        style: 'margin:.4rem 0'
+                    },
+                    h('strong', {}, p.name), ' (', p.songs.length, ' songs) ',
+                    h('button', {
+                        className: 'danger',
+                        onclick: () => delPl(p.id)
+                    }, 'Delete'))
+            )
+            return h('div', {}, form, ...list)
+        }
+
+        const mkpls = frm => {
+            console.log('Playlist save button clicked!');
+            const name = frm.querySelector('#plname').value.trim()
+            const songs = [...frm.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value)
+            console.log('Creating playlist:', { name, songs });
+            api('/api/playlists', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name,
+                        songs
+                    })
+                })
+                .then(load).then(() => flash('playlist saved ✓')).catch(() => flash('error', false))
+        }
+
+        const delPl = id => {
+            console.log('Playlist delete button clicked!', { id });
+            if (!confirm('Delete playlist?')) return
+            console.log('User confirmed playlist deletion, making API call...');
+            api('/api/playlists/' + id, {
+                    method: 'DELETE'
+                }).then(load)
+                .then(() => flash('playlist deleted')).catch(() => flash('error', false))
+        }
+
+        // convert
+        const viewConvert = () => {
+            const fileInput = h('input', {
+                type: 'file',
+                multiple: true,
+                accept: Object.keys(ALLOWED_EXT).map(e => '.' + e).join(','),
+                onchange: e => {
+                    console.log('Files selected:', e.target.files);
+                    state.currentFiles = [...e.target.files];
+                    render()
+                }
+            })
+
+            const grid = () => {
+                if (!state.currentFiles.length) return ''
+                return h('div', {},
+                    h('h3', {}, 'Master controls'),
+                    paramControls(state.convertParams),
+                    ...state.currentFiles.map(f => {
+                        // Create per-file params if they don't exist
+                        if (!state.convertParams[f.name]) {
+                            state.convertParams[f.name] = {};
+                        }
+                        return h('div', {
+                                className: 'card',
+                                style: 'background:#455a64;margin-top:.6rem'
+                            },
+                            h('strong', {}, f.name),
+                            paramControls(state.convertParams[f.name])
+                        )
+                    })
+                )
+            }
+
+            const submit = () => {
+                console.log('Convert button clicked!', { files: state.currentFiles });
+                if (!state.currentFiles.length) {
+                    console.log('No files selected, aborting...');
+                    return
+                }
+                console.log('Preparing form data with files:', state.currentFiles.map(f => f.name));
+                const fd = new FormData()
+                state.currentFiles.forEach(f => fd.append('files', f))
+                
+                // Separate global and per-file params
+                const globalParams = { ...state.convertParams };
+                const perFileParams = {};
+                
+                // Remove per-file params from global params
+                state.currentFiles.forEach(f => {
+                    if (globalParams[f.name]) {
+                        perFileParams[f.name] = globalParams[f.name];
+                        delete globalParams[f.name];
+                    }
+                });
+                
+                fd.append('global_params', JSON.stringify(globalParams))
+                fd.append('per_file_params', JSON.stringify(perFileParams))
+                console.log('Sending upload request...');
+                fetch('/api/upload', {
+                        method: 'POST',
+                        body: fd
+                    })
+                    .then(r => r.json()).then(res => {
+                        console.log('Upload response:', res);
+                        res.forEach(r => flash(`${r.file}: ${r.ok?'✓':'✗'}`, r.ok))
+                        load()
+                    }).catch(err => {
+                        console.error('Upload failed:', err);
+                        flash('upload failed', false)
+                    })
+            }
+
+            return [h('div', {
+                    className: 'card'
+                },
+                h('h2', {}, 'Batch Convert'),
+                h('p', {}, 'Up to 20 files.'),
+                fileInput,
+                grid(),
+                h('button', {
+                    onclick: submit,
+                    style: 'margin-top:.7rem'
+                }, 'Start conversion'))]
+        }
+
+        const paramControls = target => {
+            const fields = [
+                ['speed', 1, 'Speed (multiplier)', 'Scales song speed'],
+                ['volume', 1, 'Volume (multiplier)', 'Scales volume'],
+                ['transpose', 0, 'Transpose (semitones)', '±24'],
+                ['resolution', '', 'Resolution (Hz)', ''],
+                ['strum_affinity', 1, 'Strum affinity', '≥0.1'],
+            ]
+            return h('div', {},
+                ...fields.map(([k, d, l, tip]) =>
+                    h('label', {
+                            className: 'tooltip',
+                            style: 'display:block;margin:.3rem 0',
+                            'data-tip': tip || l
+                        },
+                        l + ': ',
+                        h('input', {
+                            type: 'number',
+                            step: 'any',
+                            value: d,
+                            onchange: e => target[k] = e.target.value
+                        }))),
+                h('label', {},
+                    h('input', {
+                        type: 'checkbox',
+                        onchange: e => target.mc_legal = e.target.checked
+                    }), ' Minecraft legal')
+            )
+        }
+
+        // ephemeral convert
+        const viewQuick = () => {
+            const fileInput = h('input', {
+                type: 'file',
+                accept: Object.keys(ALLOWED_EXT).map(e => '.' + e).join(','),
+                onchange: e => {
+                    console.log('File input changed:', e.target.files[0]);
+                    state.currentFile = e.target.files[0];
+                    render()
+                }
+            })
+            
+            const submit = () => {
+                console.log('Quick convert button clicked!', { file: state.currentFile });
+                if (!state.currentFile) {
+                    console.log('No file selected, aborting...');
+                    return
+                }
+                console.log('Preparing quick convert with params:', state.quickParams);
+                const fd = new FormData()
+                fd.append('file', state.currentFile)
+                fd.append('params', JSON.stringify(state.quickParams))
+                console.log('Sending ephemeral convert request...');
+                fetch('/api/convert-ephemeral', {
+                        method: 'POST',
+                        body: fd
+                    })
+                    .then(r => {
+                        console.log('Ephemeral convert response status:', r.status);
+                        if (!r.ok) throw 0;
+                        return r.blob()
+                    })
+                    .then(b => {
+                        console.log('Got blob, creating download...');
+                        const url = URL.createObjectURL(b);
+                        const a = document.createElement('a')
+                        a.href = url;
+                        a.download = state.currentFile.name.replace(/\.\w+$/, '_mc.zip');
+                        a.click();
+                        URL.revokeObjectURL(url)
+                        flash('download ready')
+                    }).catch(err => {
+                        console.error('Quick convert failed:', err);
+                        flash('fail', false)
+                    })
+            }
+            
+            return [h('div', {
+                    className: 'card'
+                },
+                h('h2', {}, 'Quick convert (no storage)'),
+                fileInput,
+                paramControls(state.quickParams),
+                h('button', {
+                    onclick: submit,
+                    style: 'margin-top:.7rem'
+                }, 'Convert & download')
+            )]
+        }
+
+        // allowed file extensions for upload
+        const ALLOWED_EXT = {
+            mid: 1,
+            midi: 1,
+            nbs: 1,
+            org: 1,
+            zip: 1
+        }
+
+        // render function - needs to be defined early
+        const render = () => {
+            const app = document.getElementById('app');
+            app.innerHTML = ''
+            location.hash ||= '#dashboard'
+            const route = location.hash.replace('#', '')
+            document.querySelectorAll('nav a').forEach(a => a.classList.toggle('active', a.hash === location.hash))
+            const flashes = state.flash.map(f => h('div', {
+                className: 'flash ' + (f.ok ? 'ok' : 'err')
+            }, f.msg))
+            app.append(...flashes,
+                ...(route === 'dashboard' ? viewDash() :
+                    route === 'convert' ? viewConvert() : viewQuick()))
+        }
+
+        const flash = (msg, ok = true) => {
+            state.flash.push({
+                msg,
+                ok
+            });
+            render();
+            setTimeout(() => {
+                state.flash.shift();
+                render()
+            }, 4e3)
+        }
+
+        const load = () => Promise.all([api('/api/songs'), api('/api/playlists')])
+            .then(([songs, pl]) => {
+                console.log('Data loaded successfully:', { songs, playlists: pl });
+                state.songs = songs;
+                state.playlists = pl;
+                render()
+            })
+            .catch(err => {
+                console.error('Failed to load data:', err);
+                flash('server offline', false)
+            })
+
+        window.addEventListener('hashchange', render)
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM Content Loaded - initializing app...');
+            load();
+            render()
+        })
+    </script>
+</body>
+
+</html>

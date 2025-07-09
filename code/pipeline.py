@@ -1,146 +1,121 @@
+from __future__ import annotations
 import argparse
+import json
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
-def run_command(cmd, description, cwd=None):
-    print(f"Running: {description}")
-    try:
-        result = subprocess.run(
-            cmd,
-            check=True,
-            capture_output=True,
-            text=True,
-            cwd=cwd
-        )
-        if result.stdout:
-            print(f"  Output: {result.stdout.strip()}")
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"  Error: {e}")
-        if e.stdout:
-            print(f"  Stdout: {e.stdout}")
-        if e.stderr:
-            print(f"  Stderr: {e.stderr}")
-        return False
+ROOT = Path(__file__).resolve().parent
+VENV_PYTHON = ROOT.parent / ".venv" / "Scripts" / "python.exe"
+HC = [str(VENV_PYTHON), "-m", "hyperchoron.cli"]
 
-def convert_midi_to_formats(midi_path, output_dir):
-    midi_path = Path(midi_path)
-    output_dir = Path(output_dir)
-    output_dir.mkdir(exist_ok=True)
-    
-    base_name = midi_path.stem
-    
-    # Convert to NBS
-    nbs_path = output_dir / f"{base_name}.nbs"
-    cmd = f'hyperchoron -i "{midi_path}" -o "{nbs_path}"'
-    if not run_command(cmd, f"Converting {midi_path.name} to NBS"):
-        return None, None, None
-    
-    # Convert to CSV
-    csv_path = output_dir / f"{base_name}.csv"
-    cmd = f'hyperchoron -i "{midi_path}" -o "{csv_path}"'
-    if not run_command(cmd, f"Converting {midi_path.name} to CSV"):
-        return nbs_path, None, None
-    
-    # Convert to JSON
-    json_path = None # TODO: add json metadata export
-    
-    return nbs_path, csv_path, json_path
 
-def render_audio(nbs_path, output_dir, audio_env_path):
-    """Render NBS to FLAC using the audio environment."""
-    nbs_path = Path(nbs_path)
-    output_dir = Path(output_dir)
-    
-    base_name = nbs_path.stem
-    flac_path = output_dir / f"{base_name}.flac"
-    
-    if sys.platform == "win32":
-        python_exe = audio_env_path / "Scripts" / "python.exe"
-    else:
-        python_exe = audio_env_path / "bin" / "python"
-    render_script = Path(__file__).parent / "render_song.py"
-    sounds_dir = Path(__file__).parent / "sounds"
-    
-    cmd = [
-        str(python_exe),
-        str(render_script),
-        str(nbs_path),
-        str(flac_path),
-    ]
-    
-    if run_command(cmd, f"Rendering {nbs_path.name} to FLAC"):
-        return flac_path
-    return None
+ALL_FLAGS = {
+    "resolution", "speed", "volume", "transpose", "invert_key",
+    "strum_affinity", "drums", "mc_legal", "max_distance",
+    "command_blocks", "minecart_improvements",
+}
 
-def main():
-    parser = argparse.ArgumentParser(description="Note Block Maestro - MIDI to NBS/CSV/JSON/FLAC pipeline")
-    parser.add_argument("midi_file", help="Input MIDI file")
-    parser.add_argument("-o", "--output", default="output", help="Output directory (default: output)")
-    parser.add_argument("--audio-env", help="Path to audio environment (default: .venv-audio)")
-    parser.add_argument("--keep-nbs", action="store_true", help="Keep NBS file (default: replace with FLAC)")
+
+def hc_args(d: dict[str, str | int | float | bool]) -> list[str]:
+    out: list[str] = []
+    for k, v in d.items():
+        if k not in ALL_FLAGS or v is None:
+            continue
+        flag = "--" + k.replace("_", "-")
+        if isinstance(v, bool):
+            if v:
+                out.append(flag)
+        else:
+            out.extend([flag, str(v)])
+    return out
+
+
+def shell(cmd: list[str]) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, capture_output=True, text=True)
+
+
+def fail(msg: str):
+    print(msg, file=sys.stderr)
+    sys.exit(1)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("midi_file")
+    ap.add_argument("--output", "-o", default="output")
+    ap.add_argument("--keep-nbs", action="store_true")
+    ap.add_argument("--audio-env")
+    # pass‑through hyperchoron flags
+    for f in ALL_FLAGS:
+        flag_name = f"--{f.replace('_','-')}"
+        if f in ["mc_legal", "drums", "invert_key", "command_blocks", "minecart_improvements"]:
+            # These are boolean flags that should use store_true
+            ap.add_argument(flag_name, dest=f, action="store_true")
+        else:
+            # These are value-based flags
+            ap.add_argument(flag_name, dest=f)
+
+    args = ap.parse_args()
+    midi = Path(args.midi_file).expanduser().resolve()
+    if not midi.exists():
+        fail(f"input not found: {midi}")
+
+    outdir = Path(args.output).expanduser().resolve()
+    outdir.mkdir(parents=True, exist_ok=True)
+    basename = midi.stem
+
+    # Hyperchoron conversion (NBS + CSV + Minecraft formats)
+    nbs = outdir / f"{basename}.nbs"
+    csv = outdir / f"{basename}.csv"
+    nbt = outdir / f"{basename}.nbt"
+
+    # Generate .nbs and .csv files
+    for dest in (".nbs", ".csv"):
+        cmd = HC + ["-i", str(midi), "-o", str(outdir / f"{basename}{dest}")]
+        cmd.extend(hc_args(vars(args)))
+        result = shell(cmd)
+        if result.returncode:
+            fail(result.stderr)
     
-    args = parser.parse_args()
-    
-    midi_path = Path(args.midi_file)
-    if not midi_path.exists():
-        print(f"Error: MIDI file not found: {midi_path}")
-        sys.exit(1)
-    
-    output_dir = Path(args.output)
-    
+    # Generate minecraft-specific .nbt file for web interface
+    cmd = HC + ["-i", str(midi), "-o", str(nbt)]
+    cmd.extend(hc_args(vars(args)))
+    result = shell(cmd)
+    if result.returncode:
+        fail(result.stderr)
+
+    # Render to flac via render_song.py (optional)
+    flac = outdir / f"{basename}.flac"
+    render = ROOT / "render_song.py"
+    pyexe = "python"
     if args.audio_env:
-        audio_env_path = Path(args.audio_env)
-    else:
-        audio_env_path = Path(__file__).parent.parent / ".venv-audio"
-    
-    if not audio_env_path.exists():
-        print(f"Error: Audio environment not found: {audio_env_path}")
-        print("Run: python -m venv .venv-audio")
-        print("Then: .venv-audio\\Scripts\\pip install nbswave numpy==1.26.4 pynbs==0.4.2 pydub audioop-lts")
-        sys.exit(1)
-    
-    print(f"Processing: {midi_path.name}")
-    print(f"Output directory: {output_dir}")
-    print()
-    
-    # Step 1: Convert MIDI to formats
-    print("Step 1: Converting MIDI to NBS/CSV/JSON...")
-    nbs_path, csv_path, json_path = convert_midi_to_formats(midi_path, output_dir)
-    
-    if not nbs_path:
-        print("Failed to convert to NBS format")
-        sys.exit(1)
-    
-    # Step 2: Render audio
-    print("\nStep 2: Rendering NBS to FLAC...")
-    flac_path = render_audio(nbs_path, output_dir, audio_env_path)
-    
-    if not flac_path:
-        print("Failed to render audio")
-        sys.exit(1)
-    
-    # Step 3: Remove NBS file if not keeping it
-    if not args.keep_nbs and nbs_path.exists():
-        print(f"\nRemoving NBS file: {nbs_path}")
-        nbs_path.unlink()
-    
-    # Summary
-    print("\n" + "="*50)
-    print("Pipeline completed successfully!")
-    print("="*50)
-    
-    outputs = []
-    if flac_path and flac_path.exists():
-        outputs.append(f"AUDIO: {flac_path}")
-    if csv_path and csv_path.exists():
-        outputs.append(f"CSV: {csv_path}")
-    if args.keep_nbs and nbs_path and nbs_path.exists():
-        outputs.append(f"NBS: {nbs_path}")
-    
-    for output in outputs:
-        print(f"  {output}")
+        venv = Path(args.audio_env)
+        pyexe = venv / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
+
+    try:
+        result = shell([str(pyexe), str(render), str(nbs), str(flac)])
+        if result.returncode:
+            print(f"Warning: Audio rendering failed: {result.stderr}", file=sys.stderr)
+            print("Note: .nbs and .csv files were created successfully", file=sys.stderr)
+    except Exception as e:
+        print(f"Warning: Audio rendering failed: {e}", file=sys.stderr)
+        print("Note: .nbs and .csv files were created successfully", file=sys.stderr)
+
+    # cleanup
+    if not args.keep_nbs and nbs.exists():
+        nbs.unlink()
+
+    meta = {
+        "display_name": basename,
+        "original_file": midi.name,
+        "converted_at": datetime.utcnow().isoformat(timespec="seconds").replace(":", "-") + "Z",
+        "parameters": {k: v for k, v in vars(args).items() if k in ALL_FLAGS and v is not None},
+    }
+    (outdir / "metadata.json").write_text(json.dumps(meta, indent=2))
+    print("OK")
+
 
 if __name__ == "__main__":
     main()
