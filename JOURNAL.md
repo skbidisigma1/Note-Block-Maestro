@@ -5,7 +5,7 @@ description: "A physical note block that plays MIDI files as note block audio wi
 created_at: "2025-06-28"
 ---
 
-### Total time spent on project: 28 hours
+### Total time spent on project: 34 hours
 
 ## June 28th: Planning
 
@@ -93,3 +93,11 @@ I finally started to take a stab at the real code for this. I wrote a pipeline w
 ![Successful pipeline](media/images/screenshot5.png)
 
 ### Total time spent: 28 hours
+
+## July 8th: Began web GUI and extensive testing + failure
+
+A lot of the time was spent diagnosing issues, but things worked out decently in the end. The web GUI wasn't too difficult to make, and it is partially functional. The ephemeral conversion still 500s and I have no idea why, but that's a problem for another day. The interface is also rather buggy, both visually and mechanically, but I am overall fairly happy with the progress on it. I was also struggling to get Hyperchoron's speed parameter working and went on a huge rabbithole in the source code patching things, which technically worked, but broke basically everything else. Moving forward, I'll probably just not include the speed parameter unless it gets patched in the library itself. The next little while will just be fixing and improving things, but I have decent groundwork laid out now.
+
+![Web interface prototype](media/images/screenshot6.png)
+
+### Total time spent: 34 hours

@@ -19,10 +19,10 @@ UPLOADS       = ROOT / "uploads"
 OUTPUTS       = ROOT / "output"
 PLAYLISTS_DIR = ROOT / "playlists"
 SPADIR        = ROOT / "static"
-AUDIO_ENV     = ROOT / ".venv-audio"
+AUDIO_ENV     = ROOT.parent / ".venv-audio"
 MAX_BATCH     = 20
 MAX_SIZE_MB   = 50
-ALLOWED_EXT   = {"mid", "midi", "nbs", "org", "zip"}
+ALLOWED_EXT   = {"mid", "midi", "nbs", "org", "zip", "csv"}
 
 for d in (UPLOADS, OUTPUTS, PLAYLISTS_DIR, SPADIR):
     d.mkdir(exist_ok=True)

@@ -3,7 +3,7 @@ import argparse
 import json
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -43,7 +43,7 @@ def fail(msg: str):
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("midi_file")
+    ap.add_argument("input_file", help="Input file (MIDI, NBS, CSV, ORG, or ZIP)")
     ap.add_argument("--output", "-o", default="output")
     ap.add_argument("--keep-nbs", action="store_true")
     ap.add_argument("--audio-env")
@@ -58,41 +58,53 @@ def main() -> None:
             ap.add_argument(flag_name, dest=f)
 
     args = ap.parse_args()
-    midi = Path(args.midi_file).expanduser().resolve()
-    if not midi.exists():
-        fail(f"input not found: {midi}")
+    input_file = Path(args.input_file).expanduser().resolve()
+    if not input_file.exists():
+        fail(f"input not found: {input_file}")
 
     outdir = Path(args.output).expanduser().resolve()
     outdir.mkdir(parents=True, exist_ok=True)
-    basename = midi.stem
+    basename = input_file.stem
 
     # Hyperchoron conversion (NBS + CSV + Minecraft formats)
     nbs = outdir / f"{basename}.nbs"
     csv = outdir / f"{basename}.csv"
     nbt = outdir / f"{basename}.nbt"
+    mcfunction = outdir / f"{basename}.mcfunction"
+    litematic = outdir / f"{basename}.litematic"
 
     # Generate .nbs and .csv files
     for dest in (".nbs", ".csv"):
-        cmd = HC + ["-i", str(midi), "-o", str(outdir / f"{basename}{dest}")]
+        cmd = HC + ["-i", str(input_file), "-o", str(outdir / f"{basename}{dest}")]
         cmd.extend(hc_args(vars(args)))
         result = shell(cmd)
         if result.returncode:
             fail(result.stderr)
     
-    # Generate minecraft-specific .nbt file for web interface
-    cmd = HC + ["-i", str(midi), "-o", str(nbt)]
-    cmd.extend(hc_args(vars(args)))
-    result = shell(cmd)
-    if result.returncode:
-        fail(result.stderr)
+    # Generate minecraft-specific formats for web interface
+    for minecraft_format in (nbt, mcfunction, litematic):
+        cmd = HC + ["-i", str(input_file), "-o", str(minecraft_format)]
+        cmd.extend(hc_args(vars(args)))
+        result = shell(cmd)
+        if result.returncode:
+            print(f"Warning: Failed to generate {minecraft_format.suffix} format: {result.stderr}", file=sys.stderr)
+            # Don't fail completely if one format fails, continue with others
 
     # Render to flac via render_song.py (optional)
     flac = outdir / f"{basename}.flac"
     render = ROOT / "render_song.py"
     pyexe = "python"
+    
+    # Auto-detect audio environment or use specified one
     if args.audio_env:
         venv = Path(args.audio_env)
         pyexe = venv / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
+    else:
+        # Try to auto-detect .venv-audio in parent directory
+        auto_audio_env = ROOT.parent / ".venv-audio"
+        if auto_audio_env.exists():
+            pyexe = auto_audio_env / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
+            print(f"Auto-detected audio environment: {auto_audio_env}", file=sys.stderr)
 
     try:
         result = shell([str(pyexe), str(render), str(nbs), str(flac)])
@@ -109,8 +121,8 @@ def main() -> None:
 
     meta = {
         "display_name": basename,
-        "original_file": midi.name,
-        "converted_at": datetime.utcnow().isoformat(timespec="seconds").replace(":", "-") + "Z",
+        "original_file": input_file.name,
+        "converted_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace(":", "-").replace("+00:00", "Z"),
         "parameters": {k: v for k, v in vars(args).items() if k in ALL_FLAGS and v is not None},
     }
     (outdir / "metadata.json").write_text(json.dumps(meta, indent=2))

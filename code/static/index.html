@@ -73,6 +73,53 @@
             margin-bottom: .5rem;
             color: var(--accent)
         }
+        h3 {
+            margin-bottom: .8rem;
+            margin-top: 1rem;
+            color: var(--accent)
+        }
+        .param-group {
+            margin-bottom: 1.2rem;
+            padding: 0.8rem;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+        }
+        .param-row {
+            margin-bottom: 0.8rem;
+        }
+        .param-row:last-child {
+            margin-bottom: 0;
+        }
+        /* Responsive scaling for larger screens */
+        @media(min-width: 1200px) {
+            :root {
+                font-size: 18px;
+            }
+            main {
+                max-width: 1400px;
+                padding: 2rem;
+            }
+            .card {
+                padding: 1.5rem 2rem;
+                margin-bottom: 1.5rem;
+            }
+            .param-group {
+                padding: 1.2rem;
+                margin-bottom: 1.6rem;
+            }
+            .param-row {
+                margin-bottom: 1rem;
+            }
+        }
+        @media(min-width: 1600px) {
+            :root {
+                font-size: 20px;
+            }
+            main {
+                max-width: 1600px;
+                padding: 2.5rem;
+            }
+        }
         table {
             width: 100%;
             border-collapse: collapse
@@ -90,6 +137,25 @@
         input[type=file] {
             font: inherit
         }
+        input[type=file] {
+            padding: 0.6rem;
+            border: 2px dashed var(--accent);
+            border-radius: 8px;
+            background: rgba(255, 179, 0, 0.1);
+            color: var(--txt);
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        input[type=file]::file-selector-button {
+            font-family: 'Miracode', 'Courier New', monospace;
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            margin-right: 0.8rem;
+            cursor: pointer;
+        }
         button {
             cursor: pointer;
             padding: .4rem .8rem;
@@ -97,7 +163,17 @@
             border-radius: 4px;
             color: var(--bg);
             background: var(--accent);
-            margin-right: .4rem
+            margin-right: .4rem;
+            transition: all 0.2s ease;
+        }
+        button:disabled {
+            background: #666;
+            color: #999;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background: #ffc107;
+            transform: translateY(-1px);
         }
         button.danger {
             background: var(--bad);
@@ -377,10 +453,25 @@
                 }
             })
 
+            const fileStatus = () => {
+                if (!state.currentFiles.length) {
+                    return h('p', { style: 'color: #888; margin: 0.5rem 0; font-style: italic;' }, 'No files selected')
+                }
+                return h('div', { style: 'margin: 0.5rem 0;' },
+                    h('p', { style: 'color: var(--accent); font-weight: bold;' }, 
+                        `${state.currentFiles.length} file${state.currentFiles.length > 1 ? 's' : ''} selected:`),
+                    h('ul', { style: 'margin: 0.3rem 0; padding-left: 1.2rem;' },
+                        ...state.currentFiles.map(f => 
+                            h('li', { style: 'color: var(--txt); margin: 0.2rem 0;' }, f.name)
+                        )
+                    )
+                )
+            }
+
             const grid = () => {
                 if (!state.currentFiles.length) return ''
                 return h('div', {},
-                    h('h3', {}, 'Master controls'),
+                    h('h3', {}, 'Master Controls'),
                     paramControls(state.convertParams),
                     ...state.currentFiles.map(f => {
                         // Create per-file params if they don't exist
@@ -389,9 +480,9 @@
                         }
                         return h('div', {
                                 className: 'card',
-                                style: 'background:#455a64;margin-top:.6rem'
+                                style: 'background:#455a64;margin-top:1rem'
                             },
-                            h('strong', {}, f.name),
+                            h('h4', { style: 'color: var(--accent); margin-bottom: 0.8rem;' }, `File: ${f.name}`),
                             paramControls(state.convertParams[f.name])
                         )
                     })
@@ -441,42 +532,194 @@
                     className: 'card'
                 },
                 h('h2', {}, 'Batch Convert'),
-                h('p', {}, 'Up to 20 files.'),
+                h('p', { style: 'margin-bottom: 1rem; color: #aaa;' }, 'Convert up to 20 files at once with individual or shared settings.'),
                 fileInput,
+                fileStatus(),
                 grid(),
                 h('button', {
                     onclick: submit,
-                    style: 'margin-top:.7rem'
-                }, 'Start conversion'))]
+                    style: 'margin-top:1.5rem; padding: 0.8rem 1.5rem; font-size: 1.1em;',
+                    disabled: !state.currentFiles.length
+                }, 'Start Conversion'))]
         }
 
         const paramControls = target => {
-            const fields = [
-                ['speed', 1, 'Speed (multiplier)', 'Scales song speed'],
-                ['volume', 1, 'Volume (multiplier)', 'Scales volume'],
-                ['transpose', 0, 'Transpose (semitones)', '±24'],
-                ['resolution', '', 'Resolution (Hz)', ''],
-                ['strum_affinity', 1, 'Strum affinity', '≥0.1'],
-            ]
-            return h('div', {},
-                ...fields.map(([k, d, l, tip]) =>
+            // Initialize default values if not set
+            if (!target.resolution) target.resolution = '';
+            if (!target.speed) target.speed = 1;
+            if (!target.volume) target.volume = 1;
+            if (!target.transpose) target.transpose = 0;
+            if (!target.strum_affinity) target.strum_affinity = 1;
+            if (target.invert_key === undefined) target.invert_key = false;
+            if (target.drums === undefined) target.drums = true;
+            if (target.mc_legal === undefined) target.mc_legal = false;
+            if (!target.max_distance) target.max_distance = 42;
+            if (target.command_blocks === undefined) target.command_blocks = false;
+            if (target.minecart_improvements === undefined) target.minecart_improvements = false;
+
+            return h('div', { className: 'param-group' },
+                h('div', { className: 'param-row' },
                     h('label', {
-                            className: 'tooltip',
-                            style: 'display:block;margin:.3rem 0',
-                            'data-tip': tip || l
-                        },
-                        l + ': ',
-                        h('input', {
-                            type: 'number',
-                            step: 'any',
-                            value: d,
-                            onchange: e => target[k] = e.target.value
-                        }))),
-                h('label', {},
+                        className: 'tooltip',
+                        style: 'display:block;margin-bottom:0.4rem',
+                        'data-tip': 'Scales song speed up/down as a multiplier. Range: 0.1-10. Higher = faster.'
+                    },
+                    'Speed (multiplier): ',
+                    h('input', {
+                        type: 'number',
+                        step: '0.1',
+                        min: '0.1',
+                        max: '10',
+                        value: target.speed,
+                        style: 'width:100%;margin-top:0.2rem',
+                        onchange: e => target.speed = parseFloat(e.target.value) || 1
+                    }))),
+                
+                h('div', { className: 'param-row' },
+                    h('label', {
+                        className: 'tooltip',
+                        style: 'display:block;margin-bottom:0.4rem',
+                        'data-tip': 'Scales volume of all notes. Range: 0.1-5. Higher = louder.'
+                    },
+                    'Volume (multiplier): ',
+                    h('input', {
+                        type: 'number',
+                        step: '0.1',
+                        min: '0.1',
+                        max: '5',
+                        value: target.volume,
+                        style: 'width:100%;margin-top:0.2rem',
+                        onchange: e => target.volume = parseFloat(e.target.value) || 1
+                    }))),
+                
+                h('div', { className: 'param-row' },
+                    h('label', {
+                        className: 'tooltip',
+                        style: 'display:block;margin-bottom:0.4rem',
+                        'data-tip': 'Transposes song up/down in semitones. Range: -24 to +24. Higher = higher pitched.'
+                    },
+                    'Transpose (semitones): ',
+                    h('input', {
+                        type: 'number',
+                        min: '-24',
+                        max: '24',
+                        value: target.transpose,
+                        style: 'width:100%;margin-top:0.2rem',
+                        onchange: e => target.transpose = parseInt(e.target.value) || 0
+                    }))),
+                
+                h('div', { className: 'param-row' },
+                    h('label', {
+                        className: 'tooltip',
+                        style: 'display:block;margin-bottom:0.4rem',
+                        'data-tip': 'Target time resolution in hertz (per-second). Range: 1-100. Defaults to 20 for Minecraft outputs, 40 otherwise.'
+                    },
+                    'Resolution (Hz): ',
+                    h('input', {
+                        type: 'number',
+                        min: '1',
+                        max: '100',
+                        value: target.resolution,
+                        placeholder: 'Auto (20/40)',
+                        style: 'width:100%;margin-top:0.2rem',
+                        onchange: e => target.resolution = e.target.value ? parseInt(e.target.value) : ''
+                    }))),
+                
+                h('div', { className: 'param-row' },
+                    h('label', {
+                        className: 'tooltip',
+                        style: 'display:block;margin-bottom:0.4rem',
+                        'data-tip': 'Threshold for sustained notes to be cut into segments. Range: 0.1-10. Higher = more notes.'
+                    },
+                    'Strum Affinity: ',
+                    h('input', {
+                        type: 'number',
+                        step: '0.1',
+                        min: '0.1',
+                        max: '10',
+                        value: target.strum_affinity,
+                        style: 'width:100%;margin-top:0.2rem',
+                        onchange: e => target.strum_affinity = parseFloat(e.target.value) || 1
+                    }))),
+                
+                h('div', { className: 'param-row' },
+                    h('label', {
+                        className: 'tooltip',
+                        'data-tip': 'Experimental: Auto-detects song key signature and inverts it (C Major ↔ C Minor)'
+                    },
                     h('input', {
                         type: 'checkbox',
-                        onchange: e => target.mc_legal = e.target.checked
-                    }), ' Minecraft legal')
+                        checked: target.invert_key,
+                        onchange: e => target.invert_key = e.target.checked
+                    }), ' Invert Key (Experimental)')),
+                
+                h('div', { className: 'param-row' },
+                    h('label', {
+                        className: 'tooltip',
+                        'data-tip': 'Allows percussion channel. If disabled, percussion channels will be treated as regular instrument channels.'
+                    },
+                    h('input', {
+                        type: 'checkbox',
+                        checked: target.drums,
+                        onchange: e => target.drums = e.target.checked
+                    }), ' Enable Drums')),
+                
+                h('div', { className: 'param-row' },
+                    h('label', {
+                        className: 'tooltip',
+                        'data-tip': 'Forces song to be vanilla Minecraft compliant. Enables additional Minecraft-specific options.'
+                    },
+                    h('input', {
+                        type: 'checkbox',
+                        checked: target.mc_legal,
+                        onchange: e => {
+                            target.mc_legal = e.target.checked;
+                            render(); // Re-render to show/hide MC-specific options
+                        }
+                    }), ' Minecraft Legal')),
+                
+                // Minecraft-specific options (only show if mc_legal is enabled)
+                ...(target.mc_legal ? [
+                    h('div', { className: 'param-row', style: 'margin-left: 1.5rem; padding: 0.8rem; background: rgba(255, 179, 0, 0.1); border-radius: 4px;' },
+                        h('h4', { style: 'color: var(--accent); margin-bottom: 0.6rem;' }, 'Minecraft-Specific Options'),
+                        
+                        h('label', {
+                            className: 'tooltip',
+                            style: 'display:block;margin-bottom:0.6rem',
+                            'data-tip': 'Maximum block distance from center line in increments of 3. Range: 3-150. Lower = more compact, less volume accuracy.'
+                        },
+                        'Max Distance: ',
+                        h('input', {
+                            type: 'number',
+                            min: '3',
+                            max: '150',
+                            step: '3',
+                            value: target.max_distance,
+                            style: 'width:100%;margin-top:0.2rem',
+                            onchange: e => target.max_distance = parseInt(e.target.value) || 42
+                        })),
+                        
+                        h('label', {
+                            className: 'tooltip',
+                            style: 'display:block;margin:0.6rem 0',
+                            'data-tip': 'Enables command blocks for notes requiring fine-tune/pitchbend. Not survival-legal.'
+                        },
+                        h('input', {
+                            type: 'checkbox',
+                            checked: target.command_blocks,
+                            onchange: e => target.command_blocks = e.target.checked
+                        }), ' Command Blocks (Not Survival Legal)'),
+                        
+                        h('label', {
+                            className: 'tooltip',
+                            'data-tip': 'Assumes server is running Minecart Improvements mod. Reduces powered rails on main track.'
+                        },
+                        h('input', {
+                            type: 'checkbox',
+                            checked: target.minecart_improvements,
+                            onchange: e => target.minecart_improvements = e.target.checked
+                        }), ' Minecart Improvements'))
+                ] : [])
             )
         }
 
@@ -491,6 +734,14 @@
                     render()
                 }
             })
+            
+            const fileStatus = () => {
+                if (!state.currentFile) {
+                    return h('p', { style: 'color: #888; margin: 0.5rem 0; font-style: italic;' }, 'No file selected')
+                }
+                return h('p', { style: 'color: var(--accent); margin: 0.5rem 0; font-weight: bold;' }, 
+                    `Selected: ${state.currentFile.name}`)
+            }
             
             const submit = () => {
                 console.log('Quick convert button clicked!', { file: state.currentFile });
@@ -530,13 +781,16 @@
             return [h('div', {
                     className: 'card'
                 },
-                h('h2', {}, 'Quick convert (no storage)'),
+                h('h2', {}, 'Quick Convert (No Storage)'),
+                h('p', { style: 'margin-bottom: 1rem; color: #aaa;' }, 'Convert a single file and download immediately without saving to the server.'),
                 fileInput,
-                paramControls(state.quickParams),
+                fileStatus(),
+                state.currentFile ? paramControls(state.quickParams) : '',
                 h('button', {
                     onclick: submit,
-                    style: 'margin-top:.7rem'
-                }, 'Convert & download')
+                    style: 'margin-top:1.5rem; padding: 0.8rem 1.5rem; font-size: 1.1em;',
+                    disabled: !state.currentFile
+                }, 'Convert & Download')
             )]
         }
 
@@ -546,10 +800,10 @@
             midi: 1,
             nbs: 1,
             org: 1,
-            zip: 1
+            zip: 1,
+            csv: 1
         }
 
-        // render function - needs to be defined early
         const render = () => {
             const app = document.getElementById('app');
             app.innerHTML = ''
