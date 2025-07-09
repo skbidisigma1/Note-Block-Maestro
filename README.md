@@ -45,5 +45,7 @@ The project is not done yet, far from it in fact. But once it is done, you trans
 | 3D Printing Filament/cost         | local                                                                                                                                                                                | 1   | 10           |
 | Pololu Power Switch               | [https://www.pololu.com/product/2810](https://www.pololu.com/product/2810)                                                                                                           | 1   | 9.90         |
 | Estimated Subtotal                |                                                                                                                                                                                      |     | 183.30       |
-| Estimated Sales Tax (7.5%)        |                                                                                                                                                                                      |     | 13.75        |
-| Estimated Total                   |                                                                                                                                                                                      |     | 197.05       |
+| Estimated Sales Tax (7.5%)        |                                                                                                                                                                                      |     | 7.94        |
+| Estimated Total                   |                                                                                                                                                                                      |     | 113.84       |
+
+Note: the RPI 5 and active cooler are paid from out of pocket
